@@ -1,4 +1,4 @@
-# w5e5_downscale / regridding 
+# w5e5_downscale / bias-correction / regridding 
 
 
 Author: Johanna Malle (<mailto:johanna.malle@slf.ch>)
