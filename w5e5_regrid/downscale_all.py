@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Desc: Prepares and executes the regridding algorithm
+Desc: Bias correction of Wind, relative humidity, and surface air pressure
 Created on 30.11.22 16:01
 @author: malle
 """
@@ -17,20 +17,9 @@ import os
 from math import floor, ceil
 import datetime
 import time
-# import urllib.request
-# import matplotlib.pyplot as plt
-# import warnings
+import glob
 
 
-# def prep_downscale(extent, bf_w5e5, bf_out, years_all, var_in):
-#
-#     all_files = list(Path(bf_w5e5 / var_in).iterdir())
-#     w5e5_data = xr.open_mfdataset(all_files)
-#     clipped_w5e5 = w5e5_data.loc[{'lat': slice(ceil(float(extent[1])), floor(float(extent[0]))),
-#                                   'lon': slice(floor(float(extent[2])), ceil(float(extent[3])))}]
-#
-#     if var_in == 'sfcWind':
-#         downscale_wind(clipped_w5e5,wind_windatlas_file)
 
 def downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, years_all, var_in):
     """
@@ -52,7 +41,7 @@ def downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, year
     years_all : ndarray
         int of start and end of regridding [year_start, year_end]
     var_in : str
-        which variable are we dealing with? ['sfcWind','ps','hurs'].
+        which variable are we dealing with? ['sfcWind','ps','rh']
 
     Returns
     -------
@@ -94,7 +83,7 @@ def downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, year
     year_all = range(years_all[0], years_all[1]+1)
 
     for year_int in year_all:  # yearly analysis to avoid files becoming too big
-        file_save = bf_out / var_in / Path(var_in + '_downscaled_v1.0_'+str(year_int)+'.nc')
+        file_save = bf_out / var_in / Path(var_in + '_corr_v1.0_'+str(year_int)+'.nc')
         id_all = datetimes.year == year_int
         clip_w5e5_time = clipped_w5e5.loc[{'time': slice(datetimes[id_all][0], datetimes[id_all][-1])}]
         clip_w5e5_time_regrid = regridder(clip_w5e5_time)
@@ -121,6 +110,7 @@ def downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, year
             'based on': 'Global wind atlas (https://globalwindatlas.info/en)'}
 
         final_datset.to_netcdf(file_save)
+        print('done with year ' + str(year_int))
 
 
 def downscale_pressure(orog_file, ds_target, extent, bf_w5e5, bf_out, years_all, var_in):
@@ -128,6 +118,27 @@ def downscale_pressure(orog_file, ds_target, extent, bf_w5e5, bf_out, years_all,
     Calculates surface air pressure at custom grid
     based on daily w5e5 sealevel pressure and altitude,
     using the barometric formula
+
+    Parameters
+    ----------
+    orog_file : Path
+        Location of dem
+    ds_target : xarray Dataset
+        Target grid, as xr Dataset
+    extent : list
+        comma seperated list of strings:
+        extent of interest [min_lat, max_lat, min_lon, max_lon]
+    bf_w5e5 : Path
+        Location of w5e5 base folder.
+    bf_out : str, optional
+        Location of output base folder.
+    years_all : ndarray
+        int of start and end of regridding [year_start, year_end]
+    var_in : str
+        which variable are we dealing with? ['sfcWind','ps','rh']
+
+    Returns
+    -------
 
     """
 
@@ -160,7 +171,7 @@ def downscale_pressure(orog_file, ds_target, extent, bf_w5e5, bf_out, years_all,
     print('done with regridding... now applying')
 
     for year_int in year_all:  # yearly analysis to avoid files becoming too big
-        file_save = bf_out / var_in / Path(var_in + '_downscaled_v1.0_'+str(year_int)+'.nc')
+        file_save = bf_out / var_in / Path(var_in + '_corr_v1.0_'+str(year_int)+'.nc')
         id_all = datetimes.year == year_int
         clip_w5e5_time = clipped_w5e5.loc[{'time': slice(datetimes[id_all][0], datetimes[id_all][-1])}]
         clip_w5e5_time_regrid = regridder_w5e5(clip_w5e5_time)
@@ -195,6 +206,27 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
     """
     Calculates surface air pressure based on w5e5 sealevel pressure and altitude, using the barometric formula
 
+    Parameters
+    ----------
+    path_monthly_chelsa : Path
+        Location of monthly 1km chelsa data
+    ds_target : xarray Dataset
+        Target grid, as xr Dataset
+    extent : list
+        comma seperated list of strings:
+        extent of interest [min_lat, max_lat, min_lon, max_lon]
+    bf_w5e5 : Path
+        Location of w5e5 base folder.
+    bf_out : str, optional
+        Location of output base folder.
+    years_all : ndarray
+        int of start and end of regridding [year_start, year_end]
+    var_in : str
+        which variable are we dealing with? ['sfcWind','ps','rh']
+
+    Returns
+    -------
+
     """
 
     all_files = list(Path(bf_w5e5 / 'hurs').iterdir())
@@ -206,9 +238,8 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
 
     datetimes = pd.to_datetime(clipped_w5e5['time'])
     year_all = range(years_all[0], years_all[1]+1)
-    print('done with regridding... now applying')
 
-    #open first chelsa file to generate regridding weights
+    # open first chelsa file to generate regridding weights
     file_in_chelsa = rioxarray.open_rasterio(path_monthly_chelsa / 'CHELSA_hurs_01_1981_V.2.1.tif',
                                              mask_and_scale=True).rio.clip_box(minx=float(extent[2]),
                                                                                miny=float(extent[3]),
@@ -217,11 +248,55 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
 
     regridder_chelsa = xe.Regridder(file_in_chelsa, ds_target, "bilinear")
 
+    print('done with regridding... now applying to all timesteps')
+
     for year_int in year_all:  # yearly analysis to avoid files becoming too big
-        file_save = bf_out / var_in / Path(var_in + '_downscaled_v1.0_'+str(year_int)+'.nc')
+        file_save = bf_out / var_in / Path(var_in + '_corr_v1.0_'+str(year_int)+'.nc')
         id_all = datetimes.year == year_int
         clip_w5e5_time = clipped_w5e5.loc[{'time': slice(datetimes[id_all][0], datetimes[id_all][-1])}]
-        clip_w5e5_time_regrid = regridder_w5e5(clip_w5e5_time)
+        clip_w5e5_time_re = regridder_w5e5(clip_w5e5_time)
+        monthly_rh_cor = clip_w5e5_time_re.copy()  # values to be overwritten
+        datetimes_year = pd.to_datetime(clip_w5e5_time['time'])
+
+        for month_int in range(1, 13):
+            id_all = datetimes_year.month == month_int
+            month_w5e5 = clip_w5e5_time.loc[{'time': slice(datetimes_year[id_all][0], datetimes_year[id_all][-1])}]
+
+            file_in_chelsa = glob.glob(str(path_monthly_chelsa) + '/*' + f"{month_int:02}" + '_' + str(year_int) + '*')
+            month_chelsa = rioxarray.open_rasterio(file_in_chelsa[0], mask_and_scale=True).rio.clip_box(
+                                                                               minx=float(extent[2]),
+                                                                               miny=float(extent[3]),
+                                                                               maxx=float(extent[0]),
+                                                                               maxy=float(extent[1]))
+
+            dr_out_chelsa = regridder_chelsa(month_chelsa) * 0.01  # before transformation: change rh to vary b/w 0 and 1
+            dr_out_chelsa_tr = np.log(dr_out_chelsa / (1 - dr_out_chelsa))  # assume beta distribuation => logit transform
+
+            dr_out_w5e5 = regridder_w5e5(month_w5e5) * 0.01  # before transformation: change rh to vary b/w 0 and 1
+            dr_out_w5e5_mean = dr_out_w5e5.mean(dim='time')  # monthly average for diff layer since chelsa data is also a monthly average
+            dr_out_w5e5_tr = np.log(dr_out_w5e5 / (1 - dr_out_w5e5))  # assume beta distribuation => logit transform
+            dr_out_w5e5_mean_tr = np.log(dr_out_w5e5_mean / (1 - dr_out_w5e5_mean))  # assume beta distribuation => logit transform
+
+            monthly_diff_layer = dr_out_chelsa_tr - dr_out_w5e5_mean_tr
+            new_transf_rh1 = dr_out_w5e5_tr + monthly_diff_layer
+            monthly_rh_cor1 = (1 / (1 + np.exp(-new_transf_rh1))) * 100  # back transform
+
+            id_all_month = np.logical_and(datetimes.year == year_int, datetimes.month == month_int)
+            monthly_rh_cor['hurs'].loc[{'time': slice(datetimes[id_all_month][0], datetimes[id_all_month][-1])}] = \
+                monthly_rh_cor1.hurs.isel(band=0).squeeze().values
+
+        monthly_rh_cor.attrs = {
+            'history': 'File was created by ' + os.getlogin() + ', PC ' + os.uname().nodename + ', created on ' +
+                       datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'institution': 'Swiss Federal Institute for Forest, Snow and Landscape Research WSL',
+            'contact': 'J.Malle <johanna.malle@wsl.ch>',
+            'title': 'Downscaled daily W5E5 ' + var_in + ' data to custom domain',
+            'version': '1.0',
+            'project': 'Inter-Sectoral Impact Model Intercomparison Project phase 3 (ISIMIP3), HighRes experiments',
+            'based on': 'monthly chelsa data'}
+
+        monthly_rh_cor.to_netcdf(file_save)
+        print('done with year ' + str(year_int))
 
 
 def main():
@@ -286,24 +361,25 @@ def main():
 
     bf_out = Path(options.output_loc)  # output data will be saved here
     bf_w5e5 = Path(options.input_path_w5e5)
-    var_in_all = list([options.var_interest])
+    var_in_all = options.var_interest.split(',')
 
     years_all = np.array([options.year_start, options.year_end])
 
     for var_in in var_in_all:
+        tt1 = time.time()
         (bf_out / var_in).mkdir(parents=True, exist_ok=True)
         print('Starting with variable ' + var_in)
         if var_in == 'sfcWind':
             wind_windatlas_file = Path(options.input_path_wind_atlas)  # source: https://globalwindatlas.info/en
             downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, years_all, var_in)
-        elif var_in == 'psl':
+        elif var_in == 'ps':
             orog_file = Path(options.input_path_orog)
             downscale_pressure(orog_file, ds_target, extent, bf_w5e5, bf_out, years_all, var_in)
         elif var_in == 'rh':
             path_monthly_chelsa = Path(options.input_path_chelsa)
             downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_all, var_in)
 
-        print(timeit2.format(time.time() - tt))
+        print(timeit2.format(time.time() - tt1))
 
     print(timeit3.format(time.time() - tt))
 
