@@ -75,13 +75,10 @@ Linux: `source activate W5E5_regrid_env`
 
 
 ## Common problems
-
-
+to do
 
 ## Getting Started
-
-`cd example`
-
-`python example.py`
+to do
 
 ## Main processing steps
+to do
