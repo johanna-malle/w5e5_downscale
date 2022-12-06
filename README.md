@@ -8,8 +8,8 @@ Author: Johanna Malle (<mailto:johanna.malle@slf.ch>)
 
 ## Main outputs
 * **downscaled/bias corrected Wind speed @ target domain** (stored as .nc-file)
-* **downscaled/bias-corrected relative humidity speed to target domain** (stored as .nc-file)
-* **bias-corrected surface air pressure at target domain** (stored as .nc-file)
+* **downscaled/bias-corrected relative humidity @ target domain** (stored as .nc-file)
+* **bias-corrected surface air pressure @ target domain** (stored as .nc-file)
 
 
 ## Requirements
