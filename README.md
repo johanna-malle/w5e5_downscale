@@ -1,13 +1,15 @@
 # w5e5_downscale / regridding 
 
 
-Author: Dr Johanna Malle (<mailto:johanna.malle@slf.ch>)
+Author: Johanna Malle (<mailto:johanna.malle@slf.ch>)
 
 ## Summary / purpose and methods
 
 
 ## Main outputs
-* **downscaled Wind speed to target domain** (stored as .nc-file)
+* **downscaled/bias corrected Wind speed @ target domain** (stored as .nc-file)
+* * **downscaled/bias-corrected relative humidity speed to target domain** (stored as .nc-file)
+* * **bias-corrected surface air pressure at target domain** (stored as .nc-file)
 
 
 ## Requirements
@@ -29,6 +31,8 @@ Before running the script you need to download the required input data files:
 
 `wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/sfcWind_W5E5v2.0_20110101-20191231.nc`
 
+### RH W5E5 data at 0.05deg
+### sea level pressure W5E5 data at 0.05deg
 
 ## Installation and environment set-up
 **Python 3.7 is required.**
