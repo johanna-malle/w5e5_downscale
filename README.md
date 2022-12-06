@@ -8,8 +8,8 @@ Author: Johanna Malle (<mailto:johanna.malle@slf.ch>)
 
 ## Main outputs
 * **downscaled/bias corrected Wind speed @ target domain** (stored as .nc-file)
-* * **downscaled/bias-corrected relative humidity speed to target domain** (stored as .nc-file)
-* * **bias-corrected surface air pressure at target domain** (stored as .nc-file)
+* **downscaled/bias-corrected relative humidity speed to target domain** (stored as .nc-file)
+* **bias-corrected surface air pressure at target domain** (stored as .nc-file)
 
 
 ## Requirements
@@ -32,7 +32,29 @@ Before running the script you need to download the required input data files:
 `wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/sfcWind_W5E5v2.0_20110101-20191231.nc`
 
 ### RH W5E5 data at 0.05deg
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/hurs_W5E5v2.0_19790101-19801231.nc`
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/hurs_W5E5v2.0_19810101-19901231.nc`
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/hurs_W5E5v2.0_19910101-20001231.nc`
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/hurs_W5E5v2.0_20010101-20101231.nc`
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/hurs_W5E5v2.0_20110101-20191231.nc`
+
 ### sea level pressure W5E5 data at 0.05deg
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/psl_W5E5v2.0_19790101-19801231.nc`
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/psl_W5E5v2.0_19810101-19901231.nc`
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/psl_W5E5v2.0_19910101-20001231.nc`
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/psl_W5E5v2.0_20010101-20101231.nc`
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/psl_W5E5v2.0_20110101-20191231.nc`
+
 
 ## Installation and environment set-up
 **Python 3.7 is required.**
