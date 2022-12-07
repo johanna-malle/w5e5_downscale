@@ -18,6 +18,9 @@ Before running the script you need to download the required input data files:
 
 `wget https://globalwindatlas.info/api/gis/global/wind-speed/10/`
 
+### Monthly Relative Humidity Timeseries at 1km (CHELSA)
+
+https://envicloud.wsl.ch/#/?prefix=chelsa%2Fchelsa_V2%2FGLOBAL%2Fmonthly%2F
 
 ### Wind W5E5 data at 0.05deg
 
@@ -74,11 +77,22 @@ Windows: `activate W5E5_regrid_env`
 Linux: `source activate W5E5_regrid_env`
 
 
-## Common problems
-to do
-
 ## Getting Started
-to do
+
+Update the file application_example with your file paths etc. and then just run:
+`./application_example.sh`
 
 ## Main processing steps
-to do
+
+#### Wind speed
+* **uses  Global
+Wind Atlas 3.0, a free, web-based application developed, owned and operated by the Technical University of Denmark
+(https://globalwindatlas.info)
+* **We assume Wind follows a Weibull distribution, perform log transform on both the high resolution global wind atlas and the temporal mean of the lower resolution w5e5 data, add this diff. layer to each log-transformed time step and back-transform the sum by exponentiating it
+
+#### Relative Humidity
+* **uses 1km monthly CHELSA data (https://chelsa-climate.org/)
+* **We assume relative humidity follows a Beta distribution, perform logit transform on both the high resolution chelsa data and the monthly mean of the lower resolution w5e5 data, add this diff. layer to each logit-transformed time step and back-transform the sum
+
+#### Surface air pressure
+* **uses W5E5 daily sea level pressure and a DEM to calculate surface air pressure via the barometric formula 
