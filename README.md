@@ -85,14 +85,14 @@ Update the file application_example with your file paths etc. and then just run:
 ## Main processing steps
 
 #### Wind speed
-* **uses  Global
+* uses  Global
 Wind Atlas 3.0, a free, web-based application developed, owned and operated by the Technical University of Denmark
 (https://globalwindatlas.info)
-* **We assume Wind follows a Weibull distribution, perform log transform on both the high resolution global wind atlas and the temporal mean of the lower resolution w5e5 data, add this diff. layer to each log-transformed time step and back-transform the sum by exponentiating it
+* We assume Wind follows a Weibull distribution, perform log transform on both the high resolution global wind atlas and the temporal mean of the lower resolution w5e5 data, add this diff. layer to each log-transformed time step and back-transform the sum by exponentiating it
 
 #### Relative Humidity
-* **uses 1km monthly CHELSA data (https://chelsa-climate.org/)
-* **We assume relative humidity follows a Beta distribution, perform logit transform on both the high resolution chelsa data and the monthly mean of the lower resolution w5e5 data, add this diff. layer to each logit-transformed time step and back-transform the sum
+* uses 1km monthly CHELSA data (https://chelsa-climate.org/)
+* We assume relative humidity follows a Beta distribution, perform logit transform on both the high resolution chelsa data and the monthly mean of the lower resolution w5e5 data, add this diff. layer to each logit-transformed time step and back-transform the sum
 
 #### Surface air pressure
-* **uses W5E5 daily sea level pressure and a DEM to calculate surface air pressure via the barometric formula 
+* uses W5E5 daily sea level pressure and a DEM to calculate surface air pressure via the barometric formula 
