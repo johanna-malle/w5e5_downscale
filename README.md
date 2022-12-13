@@ -91,6 +91,9 @@ Update the file application_example with your file paths etc. and then just run:
 
 * The Global Wind Atlas data product represents the period 2008-2017, we therefore average daily regridded W5E5 sfcwind data over this time period. We assume surface wind follows a Weibull distribution and log-transform both datasets before computing the difference layer. We add this difference layer to each log-transformed daily W5E5 raster, and back-transform the sum to obtain the final daily mean near-surface wind speed raster.
 
+$$ sfcwind_{dly} = exp^{(log(sfcwind_{dly}^{W5E5} + c)+ Δsfcwind_{cli})} - c $$
+
+$$ Δsfcwind_{cli} = log(sfcwind_{cli}^{GWA} + c) - log(sfcwind_{cli}^{W5E5} + c) $$
 
 #### Relative Humidity
 * The provided downscaling algorithm combines monthly 30’’ CHELSA-BIOCLIM+ data (https://doi.org/10.16904/envidat.332 , Brun et al. 2022) with daily W5E5 data
@@ -100,7 +103,7 @@ $$ hurs_{dly} = {1 \over (1+exp^{-h})}  $$
 
 $$ h = log({hurs_{dly}^{W5E5} \over {1 - hurs_{dly}^{W5E5}}}) +  Δhurs_{mon}$$  
 
-$$ Δhurs_{mon} = log({hursmonCHELSA \over {1 - hurs_{mon}^{CHELSA}}}) - log({{hurs_{mon}^{W5E5}} \over {1- hurs_{mon}^{W5E5}}}) $$  
+$$ Δhurs_{mon} = log({hurs_{mon}^{CHELSA} \over {1 - hurs_{mon}^{CHELSA}}}) - log({{hurs_{mon}^{W5E5}} \over {1- hurs_{mon}^{W5E5}}}) $$  
 
 #### Surface air pressure
 * uses W5E5 daily mean sea-level pressure and a DEM to calculate surface air pressure via the barometric formula:
