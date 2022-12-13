@@ -98,13 +98,13 @@ Update the file application_example with your file paths etc. and then just run:
 
 $$ hurs_{dly} = 1/(1+exp^{-h})  $$
 
-$$ h = log({hurs_{dly}^{W5E5}}/{1 - hurs_{dly}^{W5E5}) +  Δhurs_{mon}$$  
+$$ h = log({hurs_{dly}^{W5E5}} \over {1 - hurs_{dly}^{W5E5}} +  Δhurs_{mon}$$  
 
-$$ Δhurs_{mon} = log({hursmonCHELSA} / {1 - hurs_{mon}^{CHELSA}) - log({hurs_{mon}^{W5E5}} / {1- hurs_{mon}^{W5E5}} $$  
+$$ Δhurs_{mon} = log({hursmonCHELSA} \over {1 - hurs_{mon}^{CHELSA}) - log({hurs_{mon}^{W5E5}} \over {1- hurs_{mon}^{W5E5}} $$  
 
 #### Surface air pressure
 * uses W5E5 daily mean sea-level pressure and a DEM to calculate surface air pressure via the barometric formula:
 
-$$ps_{dly} = psl_{dly}^{W5E5}exp^{-(g x orog x M)/(T_{0} x R)} $$
+$$ps_{dly} = {psl_{dly}^{W5E5}exp^{-(g x orog x M) / (T_{0} x R)}} $$
 
 with $ps_{dly}$ being the regridded 0.5° W5E5 daily mean sea-level pressure (bilinear interpolation), g the gravitational acceleration constant (9.80665 m/s2), orog the height at which air pressure is calculated (CHELSA-W5E5 orog, m), M the molar mass of dry air (0.02896968 kg/mol), R the universal gas constant (8.314462618 J/(mol K)) and T0 the sea level standard temperature (288.16 K).
