@@ -22,7 +22,7 @@ Before running the script you need to download the required input data files:
 
 https://envicloud.wsl.ch/#/?prefix=chelsa%2Fchelsa_V2%2FGLOBAL%2Fmonthly%2F
 
-### Wind W5E5 data at 0.05deg
+### Wind W5E5 data at 0.5deg
 
 `wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/sfcWind_W5E5v2.0_19790101-19801231.nc`
 
@@ -34,7 +34,7 @@ https://envicloud.wsl.ch/#/?prefix=chelsa%2Fchelsa_V2%2FGLOBAL%2Fmonthly%2F
 
 `wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/sfcWind_W5E5v2.0_20110101-20191231.nc`
 
-### RH W5E5 data at 0.05deg
+### RH W5E5 data at 0.5deg
 
 `wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/hurs_W5E5v2.0_19790101-19801231.nc`
 
@@ -46,7 +46,7 @@ https://envicloud.wsl.ch/#/?prefix=chelsa%2Fchelsa_V2%2FGLOBAL%2Fmonthly%2F
 
 `wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/hurs_W5E5v2.0_20110101-20191231.nc`
 
-### sea level pressure W5E5 data at 0.05deg
+### sea level pressure W5E5 data at 0.5deg
 
 `wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/psl_W5E5v2.0_19790101-19801231.nc`
 
@@ -85,14 +85,20 @@ Update the file application_example with your file paths etc. and then just run:
 ## Main processing steps
 
 #### Wind speed
-* uses  Global
-Wind Atlas 3.0, a free, web-based application developed, owned and operated by the Technical University of Denmark
-(https://globalwindatlas.info)
-* We assume Wind follows a Weibull distribution, perform log transform on both the high resolution global wind atlas and the temporal mean of the lower resolution w5e5 data, add this diff. layer to each log-transformed time step and back-transform the sum by exponentiating it
+* To include orographic effects into daily mean near-surface wind speed (sfcwind) we follow the approach of Brun et al. 2022, and use an aggregation of the Global Wind Atlas 3.0 data (https://globalwindatlas.info) in combination with daily 0.5° sfcwind from W5E5. 
+
+* We first regrid both the Global Wind Atlas data and the W5E5 sfcwind data to the target grid/extent of 30’’ using bilinear interpolation. 
+
+* The Global Wind Atlas data product represents the period 2008-2017, we therefore average daily regridded W5E5 sfcwind data over this time period. We assume surface wind follows a Weibull distribution and log-transform both datasets before computing the difference layer. We add this difference layer to each log-transformed daily W5E5 raster, and back-transform the sum to obtain the final daily mean near-surface wind speed raster.
+
 
 #### Relative Humidity
-* uses 1km monthly CHELSA data (https://chelsa-climate.org/)
-* We assume relative humidity follows a Beta distribution, perform logit transform on both the high resolution chelsa data and the monthly mean of the lower resolution w5e5 data, add this diff. layer to each logit-transformed time step and back-transform the sum
+* The provided downscaling algorithm combines monthly 30’’ CHELSA-BIOCLIM+ data (https://doi.org/10.16904/envidat.332 , Brun et al. 2022) with daily W5E5 data
+* In a first step we regrid daily 0.5° W5E5 hurs to the target grid (30”, 1.5’ or 5’) and extent using bilinear interpolation. We assume relative humidity follows a beta-distribution and logit-transform both regridded monthly-averaged W5E5 and monthly CHELSA-BIOCLIM+ relative humidity data. The difference layer is then added to daily regridded and logit-transformed W5E5 hurs of the respective month, and the final raster is obtained by back-transforming the sum. 
 
 #### Surface air pressure
-* uses W5E5 daily sea level pressure and a DEM to calculate surface air pressure via the barometric formula 
+* uses W5E5 daily mean sea-level pressure and a DEM to calculate surface air pressure via the barometric formula:
+
+$$ps_{dly} = psl_{dly}^{W5E5}exp^{-(g  orog  M)/(T0 R)} $$
+
+with $$ps_{dly}$$ being the regridded 0.5° W5E5 daily mean sea-level pressure (bilinear interpolation), g the gravitational acceleration constant (9.80665 m/s2), orog the height at which air pressure is calculated (CHELSA-W5E5 orog, m), M the molar mass of dry air (0.02896968 kg/mol), R the universal gas constant (8.314462618 J/(mol K)) and T0 the sea level standard temperature (288.16 K).
