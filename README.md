@@ -98,9 +98,9 @@ Update the file application_example with your file paths etc. and then just run:
 
 $$ hurs_{dly} = {1 \over (1+exp^{-h})}  $$
 
-$$ h = log({hurs_{dly}^{W5E5} \over {1 - hurs_{dly}^{W5E5}}} +  Δhurs_{mon}$$  
+$$ h = log({hurs_{dly}^{W5E5} \over {1 - hurs_{dly}^{W5E5}}}) +  Δhurs_{mon}$$  
 
-$$ Δhurs_{mon} = log({{hursmonCHELSA} \over {1 - hurs_{mon}^{CHELSA})} - log({{hurs_{mon}^{W5E5}} \over {1- hurs_{mon}^{W5E5}}} $$  
+$$ Δhurs_{mon} = log({hursmonCHELSA \over {1 - hurs_{mon}^{CHELSA}}}) - log({{hurs_{mon}^{W5E5}} \over {1- hurs_{mon}^{W5E5}}}) $$  
 
 #### Surface air pressure
 * uses W5E5 daily mean sea-level pressure and a DEM to calculate surface air pressure via the barometric formula:
