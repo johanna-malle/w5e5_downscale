@@ -85,7 +85,7 @@ Update the file application_example with your file paths etc. and then just run:
 
 ## Main processing steps
 
-#### Wind speed
+#### Daily mean Near-Surface Wind Speed
 * To include orographic effects into daily mean near-surface wind speed (sfcwind) we follow the approach of Brun et al. 2022, and use an aggregation of the Global Wind Atlas 3.0 data (https://globalwindatlas.info) in combination with daily 0.5° sfcwind from W5E5. 
 
 * We first regrid both the Global Wind Atlas data and the W5E5 sfcwind data to the target grid/extent using bilinear interpolation. For all regridding xesmf is used (https://xesmf.readthedocs.io/en/latest/).
@@ -96,7 +96,7 @@ $$ sfcwind_{dly} = exp^{(log(sfcwind_{dly}^{W5E5} + c)+ Δsfcwind_{cli})} - c $$
 
 $$ Δsfcwind_{cli} = log(sfcwind_{cli}^{GWA} + c) - log(sfcwind_{cli}^{W5E5} + c) $$
 
-#### Relative Humidity
+#### Daily mean Near-Surface Relative Humidity
 * The provided downscaling algorithm combines monthly 30’’ CHELSA-BIOCLIM+ data (https://doi.org/10.16904/envidat.332 , Brun et al. 2022) with daily W5E5 data
 * In a first step we regrid daily 0.5° W5E5 hurs to the target grid (30”, 1.5’ or 5’) and extent using bilinear interpolation. We assume relative humidity follows a beta-distribution and logit-transform both regridded monthly-averaged W5E5 and monthly CHELSA-BIOCLIM+ relative humidity data. The difference layer is then added to daily regridded and logit-transformed W5E5 hurs of the respective month, and the final raster is obtained by back-transforming the sum. 
 
@@ -106,13 +106,13 @@ $$ h = log({hurs_{dly}^{W5E5} \over {1 - hurs_{dly}^{W5E5}}}) +  Δhurs_{mon}$$
 
 $$ Δhurs_{mon} = log({hurs_{mon}^{CHELSA} \over {1 - hurs_{mon}^{CHELSA}}}) - log({{hurs_{mon}^{W5E5}} \over {1- hurs_{mon}^{W5E5}}}) $$  
 
-#### Surface air pressure
+#### Daily mean Surface Air Pressure
 * uses W5E5 daily mean sea-level pressure and a DEM to calculate surface air pressure via the barometric formula:
 
 $$ps_{dly} = {psl_{dly}^{W5E5}exp^{-(g * orog * M) / (T_{0} * R)}} $$
 
-with $ps_{dly}$ being the regridded 0.5° W5E5 daily mean sea-level pressure (bilinear interpolation), g the gravitational acceleration constant (9.80665 m/s2), orog the height at which air pressure is calculated (CHELSA-W5E5 orog, m), M the molar mass of dry air (0.02896968 kg/mol), R the universal gas constant (8.314462618 J/(mol K)) and T0 the sea level standard temperature (288.16 K).
+with $ps_{dly}$ being the regridded 0.5° W5E5 daily mean sea-level pressure (bilinear interpolation), $g$ the gravitational acceleration constant (9.80665 m/s2), $orog$ the height at which air pressure is calculated (CHELSA-W5E5 orog, m), $M$ the molar mass of dry air (0.02896968 kg/mol), $R$ the universal gas constant (8.314462618 J/(mol K)) and $T_{0}$ the sea level standard temperature (288.16 K).
 
-#### Longwave radiation
+#### Surface Downwelling Longwave Radiation
 
 * to do
