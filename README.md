@@ -87,7 +87,7 @@ Update the file application_example with your file paths etc. and then just run:
 #### Wind speed
 * To include orographic effects into daily mean near-surface wind speed (sfcwind) we follow the approach of Brun et al. 2022, and use an aggregation of the Global Wind Atlas 3.0 data (https://globalwindatlas.info) in combination with daily 0.5° sfcwind from W5E5. 
 
-* We first regrid both the Global Wind Atlas data and the W5E5 sfcwind data to the target grid/extent of 30’’ using bilinear interpolation. 
+* We first regrid both the Global Wind Atlas data and the W5E5 sfcwind data to the target grid/extent using bilinear interpolation. For all regridding xesmf is used (https://xesmf.readthedocs.io/en/latest/).
 
 * The Global Wind Atlas data product represents the period 2008-2017, we therefore average daily regridded W5E5 sfcwind data over this time period. We assume surface wind follows a Weibull distribution and log-transform both datasets before computing the difference layer. We add this difference layer to each log-transformed daily W5E5 raster, and back-transform the sum to obtain the final daily mean near-surface wind speed raster.
 
@@ -111,3 +111,7 @@ $$ Δhurs_{mon} = log({hurs_{mon}^{CHELSA} \over {1 - hurs_{mon}^{CHELSA}}}) - l
 $$ps_{dly} = {psl_{dly}^{W5E5}exp^{-(g * orog * M) / (T_{0} * R)}} $$
 
 with $ps_{dly}$ being the regridded 0.5° W5E5 daily mean sea-level pressure (bilinear interpolation), g the gravitational acceleration constant (9.80665 m/s2), orog the height at which air pressure is calculated (CHELSA-W5E5 orog, m), M the molar mass of dry air (0.02896968 kg/mol), R the universal gas constant (8.314462618 J/(mol K)) and T0 the sea level standard temperature (288.16 K).
+
+#### Longwave radiation
+
+* to do
