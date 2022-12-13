@@ -19,7 +19,7 @@ Before running the script you need to download the required input data files:
 `wget https://globalwindatlas.info/api/gis/global/wind-speed/10/`
 
 ### Monthly Relative Humidity Timeseries at 1km (CHELSA)
-
+https://doi.org/10.16904/envidat.332 
 https://envicloud.wsl.ch/#/?prefix=chelsa%2Fchelsa_V2%2FGLOBAL%2Fmonthly%2F
 
 ### Wind W5E5 data at 0.5deg
