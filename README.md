@@ -14,16 +14,16 @@ Author: Johanna Malle (<mailto:johanna.malle@slf.ch>)
 
 ## Requirements
 Before running the script you need to download the required input data files:
-### Wind data from Global Wind Atlas
+### Near-Surface Wind Speed from Global Wind Atlas
 
 `wget https://globalwindatlas.info/api/gis/global/wind-speed/10/`
 
-### Monthly Relative Humidity Timeseries at 1km (CHELSA)
+### CHELSA-BIOCLIM+ monthly mean Near-Surface Relative Humidity at 30"
 https://doi.org/10.16904/envidat.332 
 
 https://envicloud.wsl.ch/#/?prefix=chelsa%2Fchelsa_V2%2FGLOBAL%2Fmonthly%2F
 
-### Wind W5E5 data at 0.5deg
+### W5E5 daily mean Near-Surface Wind Speed at 0.5deg
 
 `wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/sfcWind_W5E5v2.0_19790101-19801231.nc`
 
@@ -35,7 +35,7 @@ https://envicloud.wsl.ch/#/?prefix=chelsa%2Fchelsa_V2%2FGLOBAL%2Fmonthly%2F
 
 `wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/sfcWind_W5E5v2.0_20110101-20191231.nc`
 
-### RH W5E5 data at 0.5deg
+### W5E5 daily mean Near-Surface Relative Humidity at 0.5deg
 
 `wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/hurs_W5E5v2.0_19790101-19801231.nc`
 
@@ -47,7 +47,7 @@ https://envicloud.wsl.ch/#/?prefix=chelsa%2Fchelsa_V2%2FGLOBAL%2Fmonthly%2F
 
 `wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/hurs_W5E5v2.0_20110101-20191231.nc`
 
-### sea level pressure W5E5 data at 0.5deg
+### W5E5 daily mean Surface Air Pressure at 0.5deg
 
 `wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/psl_W5E5v2.0_19790101-19801231.nc`
 
@@ -86,6 +86,7 @@ Update the file application_example with your file paths etc. and then just run:
 ## Main processing steps
 
 #### Daily mean Near-Surface Wind Speed
+
 * To include orographic effects into daily mean near-surface wind speed (sfcwind) we follow the approach of Brun et al. 2022, and use an aggregation of the Global Wind Atlas 3.0 data (https://globalwindatlas.info) in combination with daily 0.5° sfcwind from W5E5. 
 
 * We first regrid both the Global Wind Atlas data and the W5E5 sfcwind data to the target grid/extent using bilinear interpolation. For all regridding xesmf is used (https://xesmf.readthedocs.io/en/latest/).
@@ -97,6 +98,7 @@ $$ sfcwind_{dly} = exp^{(log(sfcwind_{dly}^{W5E5} + c)+ Δsfcwind_{cli})} - c $$
 $$ Δsfcwind_{cli} = log(sfcwind_{cli}^{GWA} + c) - log(sfcwind_{cli}^{W5E5} + c) $$
 
 #### Daily mean Near-Surface Relative Humidity
+
 * The provided downscaling algorithm combines monthly 30’’ CHELSA-BIOCLIM+ data (https://doi.org/10.16904/envidat.332 , Brun et al. 2022) with daily W5E5 data
 * In a first step we regrid daily 0.5° W5E5 hurs to the target grid (30”, 1.5’ or 5’) and extent using bilinear interpolation. We assume relative humidity follows a beta-distribution and logit-transform both regridded monthly-averaged W5E5 and monthly CHELSA-BIOCLIM+ relative humidity data. The difference layer is then added to daily regridded and logit-transformed W5E5 hurs of the respective month, and the final raster is obtained by back-transforming the sum. 
 
@@ -107,6 +109,7 @@ $$ h = log({hurs_{dly}^{W5E5} \over {1 - hurs_{dly}^{W5E5}}}) +  Δhurs_{mon}$$
 $$ Δhurs_{mon} = log({hurs_{mon}^{CHELSA} \over {1 - hurs_{mon}^{CHELSA}}}) - log({{hurs_{mon}^{W5E5}} \over {1- hurs_{mon}^{W5E5}}}) $$  
 
 #### Daily mean Surface Air Pressure
+
 * uses W5E5 daily mean sea-level pressure and a DEM to calculate surface air pressure via the barometric formula:
 
 $$ps_{dly} = {psl_{dly}^{W5E5}exp^{-(g * orog * M) / (T_{0} * R)}} $$
