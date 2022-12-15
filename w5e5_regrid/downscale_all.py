@@ -20,7 +20,6 @@ import time
 import glob
 
 
-
 def downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, years_all, var_in):
     """
     Downscales wind based on global wind atlas data
@@ -269,13 +268,13 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
                                                                                maxx=float(extent[0]),
                                                                                maxy=float(extent[1]))
 
-            dr_out_chelsa = regridder_chelsa(month_chelsa) * 0.01  # before transformation: change rh to vary b/w 0 and 1
-            dr_out_chelsa_tr = np.log(dr_out_chelsa / (1 - dr_out_chelsa))  # assume beta distribuation => logit transform
+            dr_out_chelsa = regridder_chelsa(month_chelsa) * 0.01  # before transformation: change rh to vary b/w 0 1
+            dr_out_chelsa_tr = np.log(dr_out_chelsa / (1 - dr_out_chelsa))  # assume beta distrib. => logit transform
 
             dr_out_w5e5 = regridder_w5e5(month_w5e5) * 0.01  # before transformation: change rh to vary b/w 0 and 1
-            dr_out_w5e5_mean = dr_out_w5e5.mean(dim='time')  # monthly average for diff layer since chelsa data is also a monthly average
+            dr_out_w5e5_mean = dr_out_w5e5.mean(dim='time')  # monthly average for diff layer b/c chelsa == monthly
             dr_out_w5e5_tr = np.log(dr_out_w5e5 / (1 - dr_out_w5e5))  # assume beta distribuation => logit transform
-            dr_out_w5e5_mean_tr = np.log(dr_out_w5e5_mean / (1 - dr_out_w5e5_mean))  # assume beta distribuation => logit transform
+            dr_out_w5e5_mean_tr = np.log(dr_out_w5e5_mean / (1 - dr_out_w5e5_mean))  # logit transform
 
             monthly_diff_layer = dr_out_chelsa_tr - dr_out_w5e5_mean_tr
             new_transf_rh1 = dr_out_w5e5_tr + monthly_diff_layer
@@ -296,6 +295,142 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
             'based on': 'monthly chelsa data'}
 
         monthly_rh_cor.to_netcdf(file_save)
+        print('done with year ' + str(year_int))
+
+
+def downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, bf_out, years_all, var_in):
+    """
+    Calculates downscaled longwave radiation based on w5e5 longwave etc
+
+    Parameters
+    ----------
+    path_rh_fine : Path
+        Location of rh high resolution data
+    path_tas_fine : Path
+        Location of tas high resolution data
+    ds_target : xarray Dataset
+        Target grid, as xr Dataset
+    extent : list
+        comma seperated list of strings:
+        extent of interest [min_lat, max_lat, min_lon, max_lon]
+    bf_w5e5 : Path
+        Location of w5e5 base folder.
+    bf_out : str, optional
+        Location of output base folder.
+    years_all : ndarray
+        int of start and end of regridding [year_start, year_end]
+    var_in : str
+        which variable are we dealing with? ['sfcWind','ps','rh']
+
+    Returns
+    -------
+
+    """
+
+    x1 = 0.43
+    x2 = 5.7
+    sbc = 5.67 * 10E-8   # stefan boltzman constant [Js−1 m−2 K−4]
+
+    es0 = 6.11  # reference saturation vapour pressure
+    T0 = 273.15
+    lv = 2.5E6  # latent heat of vaporization of water
+    Rv = 461.5  # gas constant for water vapour [J K kg-1]
+
+    all_files = list(Path(bf_w5e5 / 'hurs').iterdir())
+    w5e5_data = xr.open_mfdataset(all_files)
+    clipped_w5e5_rh = w5e5_data.loc[{'lat': slice(ceil(float(extent[1])), floor(float(extent[0]))),
+                                     'lon': slice(floor(float(extent[2])), ceil(float(extent[3])))}]
+
+    all_files = list(Path(bf_w5e5 / 'tas').iterdir())
+    w5e5_data = xr.open_mfdataset(all_files)
+    clipped_w5e5_tas = w5e5_data.loc[{'lat': slice(ceil(float(extent[1])), floor(float(extent[0]))),
+                                      'lon': slice(floor(float(extent[2])), ceil(float(extent[3])))}]
+
+    all_files = list(Path(bf_w5e5 / 'rlds').iterdir())
+    w5e5_data = xr.open_mfdataset(all_files)
+    clipped_w5e5_rlds = w5e5_data.loc[{'lat': slice(ceil(float(extent[1])), floor(float(extent[0]))),
+                                       'lon': slice(floor(float(extent[2])), ceil(float(extent[3])))}]
+
+    regridder_w5e5 = xe.Regridder(clipped_w5e5_rh, ds_target, "bilinear")
+
+    datetimes = pd.to_datetime(clipped_w5e5_rh['time'])
+    year_all = range(years_all[0], years_all[1]+1)
+
+    # we also need target grid rh and temp:
+    file_in_tas_fine = glob.glob(str(path_tas_fine) + '/*' + str(year_all[0]) + '*')
+    tas_in_fine = xr.open_dataset(file_in_tas_fine[0])
+    clipped_tas_fine = tas_in_fine.loc[{'lat': slice(floor(float(extent[0])), ceil(float(extent[1]))),
+                                        'lon': slice(floor(float(extent[2])), ceil(float(extent[3])))}]
+    del tas_in_fine
+    regridder_chelsa_tas = xe.Regridder(clipped_tas_fine, ds_target, "bilinear")
+
+    file_in_rh_fine = glob.glob(str(path_rh_fine) + '/*' + str(year_all[0]) + '*')
+    rh_in_fine = xr.open_dataset(file_in_rh_fine[0])
+    clipped_rh_fine = rh_in_fine.loc[{'lat': slice(floor(float(extent[0])), ceil(float(extent[1]))),
+                                      'lon': slice(floor(float(extent[2])), ceil(float(extent[3])))}]
+    regridder_chelsa_rh = xe.Regridder(clipped_rh_fine, ds_target, "bilinear")
+
+    print('done with regridding... now applying to all timesteps')
+
+    for year_int in year_all:  # yearly analysis to avoid files becoming too big
+        file_save = bf_out / var_in / Path(var_in + '_corr_v1.0_'+str(year_int)+'.nc')
+        (bf_out / var_in).mkdir(parents=True, exist_ok=True)
+        id_all = datetimes.year == year_int
+
+        clip_w5e5_time = clipped_w5e5_rh.loc[{'time': slice(datetimes[id_all][0], datetimes[id_all][-1])}]
+        rh_coarse = regridder_w5e5(clip_w5e5_time)
+
+        clip_w5e5_time = clipped_w5e5_tas.loc[{'time': slice(datetimes[id_all][0], datetimes[id_all][-1])}]
+        temp_coarse = regridder_w5e5(clip_w5e5_time)
+
+        clip_w5e5_rlds = clipped_w5e5_rlds.loc[{'time': slice(datetimes[id_all][0], datetimes[id_all][-1])}]
+        lw_coarse = regridder_w5e5(clip_w5e5_rlds)
+
+        file_in_rh_fine = glob.glob(str(path_rh_fine) + '/*' + str(year_int) + '*')
+        file_rh_fine = xr.open_mfdataset(file_in_rh_fine)  # should be just 1 file
+        clipped_rh_fine = file_rh_fine.loc[{'lat': slice(floor(float(extent[0])), ceil(float(extent[1]))),
+                                            'lon': slice(floor(float(extent[2])), ceil(float(extent[3])))}]
+        rh_fine = regridder_chelsa_rh(clipped_rh_fine)
+
+        file_in_tas_fine = glob.glob(str(path_tas_fine) + '/*' + str(year_int) + '*')
+        file_tas_fine = xr.open_mfdataset(file_in_tas_fine)  # multiple files
+        clipped_tas_fine = file_tas_fine.loc[{'lat': slice(floor(float(extent[0])), ceil(float(extent[1]))),
+                                              'lon': slice(floor(float(extent[2])), ceil(float(extent[3])))}]
+        temp_fine = regridder_chelsa_tas(clipped_tas_fine)
+
+        # now ready for calculation:
+        es_coarse = es0 * np.exp((lv / Rv) * (1 / T0 - 1 / temp_coarse.tas.data))
+        pV_coarse = (rh_coarse.hurs.data * es_coarse) / 100  # water vapur pressure
+
+        es_fine = es0 * np.exp((lv / Rv) * (1 / T0 - 1 / temp_fine.tas.data))
+        pV_fine = (rh_fine.hurs.data * es_fine) / 100  # water vapur pressure
+
+        e_cl_coarse = 0.23 + x1 * (pV_coarse / temp_coarse.tas.data) ** (1 / x2)  # clear-sky emissivity w5e5
+        e_cl_fine = 0.23 + x1 * (pV_fine / temp_fine.tas.data) ** (1 / x2)  # clear-sky emissivity target grid
+
+        e_as_coarse = lw_coarse.rlds.data / (sbc * temp_coarse.tas.data ** 4)  # all-sky emissivity w5e5
+        delta_e = e_as_coarse - e_cl_coarse  # cloud-based component of emissivity w5e5
+
+        lw_fine = (e_cl_fine + delta_e) * sbc * temp_fine.tas.data ** 4  # downscaled lwr! assume cloud e is the same
+
+        final_datset = lw_coarse.copy()
+        final_datset.rlds.values = lw_fine
+
+        final_datset.time.attrs = clip_w5e5_rlds.time.attrs
+        final_datset.lon.attrs = clip_w5e5_rlds.lon.attrs
+        final_datset.lat.attrs = clip_w5e5_rlds.lat.attrs
+        final_datset.rlds.attrs = clip_w5e5_rlds.rlds.attrs
+
+        final_datset.attrs = {
+            'history': 'File was created by ' + os.getlogin() + ', PC ' + os.uname().nodename + ', created on ' +
+                       datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'institution': 'Swiss Federal Institute for Forest, Snow and Landscape Research WSL',
+            'contact': 'J.Malle <johanna.malle@wsl.ch>',
+            'title': 'Downscaled daily W5E5 ' + var_in + ' data to custom domain',
+            'version': '1.0',
+            'project': 'Inter-Sectoral Impact Model Intercomparison Project phase 3 (ISIMIP3a), HighRes experiments'}
+
+        final_datset.to_netcdf(file_save)
         print('done with year ' + str(year_int))
 
 
@@ -330,15 +465,21 @@ def main():
     parser.add_option('-v', '--var_interest', action='store',
                       type='string', dest='var_interest', default='sfcWind',
                       help='name of variable to be analysed, comma separated if more than 1 [str]')
-    # parser.add_option('-m', '--months', action='store',
-    #                  type='string', dest='months', default='1,2,3,4,5,6,7,8,9,10,11,12',
-    #                  help=('comma-separated list of integers from {1,...,12} representing months to downscale'))
+    parser.add_option('-v', '--input_path_tas_fine', action='store',
+                      type='string', dest='input_path_tas_fine', default='',
+                      help='path to highres tas for lwr computation [str]')
+    parser.add_option('-v', '--input_path_rh_fine', action='store',
+                      type='string', dest='input_path_rh_fine', default='',
+                      help='path to highres rh for lwr computation [str]')
     parser.add_option('-y', '--year_start', action='store',
                       type='int', dest='year_start', default=1979,
                       help='year to start')
     parser.add_option('-z', '--year_end', action='store',
                       type='int', dest='year_end', default=2016,
                       help='year to end')
+    # parser.add_option('-m', '--months', action='store',
+    #                  type='string', dest='months', default='1,2,3,4,5,6,7,8,9,10,11,12',
+    #                  help=('comma-separated list of integers from {1,...,12} representing months to downscale'))
 
     (options, args) = parser.parse_args()
 
@@ -378,6 +519,10 @@ def main():
         elif var_in == 'rh':
             path_monthly_chelsa = Path(options.input_path_chelsa)
             downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_all, var_in)
+        elif var_in == 'rlds':
+            path_rh_fine = Path(options.input_path_rh_fine)
+            path_tas_fine = Path(options.input_path_tas_fine)
+            downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, bf_out, years_all, var_in)
 
         print(timeit2.format(time.time() - tt1))
 
