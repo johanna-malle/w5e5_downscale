@@ -1,4 +1,4 @@
-# w5e5_downscale / bias-correction / regridding 
+# w5e5_downscale / bias-correction / regridding for ISIMIP3 HighRes Experiments
 
 
 Author: Johanna Malle (<mailto:johanna.malle@slf.ch>)
@@ -7,9 +7,10 @@ Author: Johanna Malle (<mailto:johanna.malle@slf.ch>)
 
 
 ## Main outputs
-* **downscaled/bias corrected Wind speed @ target domain** (stored as .nc-file)
-* **downscaled/bias-corrected relative humidity @ target domain** (stored as .nc-file)
-* **bias-corrected surface air pressure @ target domain** (stored as .nc-file)
+* **downscaled/bias corrected daily mean Near-Surface Wind Speed @ target domain** (stored as .nc-file)
+* **downscaled/bias-corrected daily mean Near-Surface Relative Humidity @ target domain** (stored as .nc-file)
+* **downscaled/bias-corrected daily mean Surface Downwelling Longwave Radiation @ target domain** (stored as .nc-file)
+* **bias-corrected daily mean Surface Air Pressure @ target domain** (stored as .nc-file)
 
 
 ## Requirements
@@ -58,6 +59,18 @@ https://envicloud.wsl.ch/#/?prefix=chelsa%2Fchelsa_V2%2FGLOBAL%2Fmonthly%2F
 `wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/psl_W5E5v2.0_20010101-20101231.nc`
 
 `wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/psl_W5E5v2.0_20110101-20191231.nc`
+
+### W5E5 daily mean Surface Downwelling Longwave Radiation at 0.5deg
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/rlds_W5E5v2.0_19790101-19801231.nc`
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/rlds_W5E5v2.0_19810101-19901231.nc`
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/rlds_W5E5v2.0_19910101-20001231.nc`
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/rlds_W5E5v2.0_20010101-20101231.nc`
+
+`wget https://files.isimip.org/ISIMIP3a/SecondaryInputData/climate/atmosphere/obsclim/global/daily/historical/W5E5v2.0/rlds_W5E5v2.0_20110101-20191231.nc`
 
 
 ## Installation and environment set-up
@@ -118,4 +131,6 @@ with $ps_{dly}$ being the regridded 0.5° W5E5 daily mean sea-level pressure (bi
 
 #### Surface Downwelling Longwave Radiation
 
-* to do
+* follows Fiddes and Gruber (2014, https://doi.org/10.5194/gmd-7-387-2014) and Konzelmann et al. 1994 (https://doi.org/10.1016/0921-8181(94)90013-2)
+* assume cloud emissivity is the same at coarse and fine scale, but account for reduction in clear-sky emissivity with elevation
+* uses fine-scale temperature (CHELSA) and RH data (hence the RH algorithm above must be run first) 
