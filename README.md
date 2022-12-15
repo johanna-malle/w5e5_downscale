@@ -3,8 +3,6 @@
 
 Author: Johanna Malle (<mailto:johanna.malle@slf.ch>)
 
-## Summary / purpose and methods
-
 
 ## Main outputs
 * **downscaled/bias corrected daily mean Near-Surface Wind Speed @ target domain** (stored as .nc-file)
@@ -95,6 +93,8 @@ Linux: `source activate W5E5_regrid_env`
 
 Update the file application_example with your file paths etc. and then just run:
 `./application_example.sh`
+
+Note that the longwave calculation relies on relative humidity... hence this needs to be run first!
 
 ## Main processing steps
 
