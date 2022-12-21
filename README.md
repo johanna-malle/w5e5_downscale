@@ -74,7 +74,8 @@ https://envicloud.wsl.ch/#/?prefix=chelsa%2Fchelsa_V2%2FGLOBAL%2Fmonthly%2F
 ## Installation and environment set-up
 **Python 3.7 is required.**
 
-Tested on: Ubuntu 18.04 ... to do rest
+Since we use esmf for regridding this setup only works on linux OS.
+Tested on: Ubuntu 18.04. 
 
 ### Environment set-up
 #### With Conda package manager (recommended)
