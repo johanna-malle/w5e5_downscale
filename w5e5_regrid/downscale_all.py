@@ -329,9 +329,9 @@ def downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, 
 
     x1 = 0.43
     x2 = 5.7
-    sbc = 5.67 * 10E-8   # stefan boltzman constant [Js−1 m−2 K−4]
+    sbc = 5.67E-8   # stefan boltzman constant [Js−1 m−2 K−4]
 
-    es0 = 6.11  # reference saturation vapour pressure
+    es0 = 6.11  # reference saturation vapour pressure  [hPa]
     T0 = 273.15
     lv = 2.5E6  # latent heat of vaporization of water
     Rv = 461.5  # gas constant for water vapour [J K kg-1]
@@ -403,15 +403,18 @@ def downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, 
         pV_coarse = (rh_coarse.hurs.data * es_coarse) / 100  # water vapur pressure
 
         es_fine = es0 * np.exp((lv / Rv) * (1 / T0 - 1 / temp_fine.tas.data))
-        pV_fine = (rh_fine.hurs.data * es_fine) / 100  # water vapur pressure
+        pV_fine = (rh_fine.hurs.data * es_fine) / 100  # water vapur pressure [hPa]
 
-        e_cl_coarse = 0.23 + x1 * (pV_coarse / temp_coarse.tas.data) ** (1 / x2)  # clear-sky emissivity w5e5
-        e_cl_fine = 0.23 + x1 * (pV_fine / temp_fine.tas.data) ** (1 / x2)  # clear-sky emissivity target grid
+        e_cl_coarse = 0.23 + x1 * ((pV_coarse*100) / temp_coarse.tas.data) ** (1 / x2)  # clear-sky emissivity w5e5 (pV needs to be in Pa not hPa, hence *100)
+        e_cl_fine = 0.23 + x1 * ((pV_fine*100) / temp_fine.tas.data) ** (1 / x2)  # clear-sky emissivity target grid (pV needs to be in Pa not hPa, hence *100)
 
         e_as_coarse = lw_coarse.rlds.data / (sbc * temp_coarse.tas.data ** 4)  # all-sky emissivity w5e5
+        e_as_coarse[e_as_coarse > 1] = 1  #  constrain all-sky emissivity to max 1
         delta_e = e_as_coarse - e_cl_coarse  # cloud-based component of emissivity w5e5
-
-        lw_fine = (e_cl_fine + delta_e) * sbc * temp_fine.tas.data ** 4  # downscaled lwr! assume cloud e is the same
+        
+        e_as_fine = e_cl_fine + delta_e
+        e_as_fine[e_as_fine > 1] = 1  #  constrain all-sky emissivity to max 1
+        lw_fine = e_as_fine * sbc * temp_fine.tas.data ** 4  # downscaled lwr! assume cloud e is the same
 
         final_datset = lw_coarse.copy()
         final_datset.rlds.values = lw_fine
