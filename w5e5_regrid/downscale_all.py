@@ -20,7 +20,7 @@ import time
 import glob
 
 
-def downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, years_all, var_in):
+def downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, years_all, var_in, clipped_target_grid):
     """
     Downscales wind based on global wind atlas data
 
@@ -108,11 +108,17 @@ def downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, year
             'project': 'Inter-Sectoral Impact Model Intercomparison Project phase 3 (ISIMIP3), HighRes experiments',
             'based on': 'Global wind atlas (https://globalwindatlas.info/en)'}
 
-        final_datset.to_netcdf(file_save)
+        if clipped_target_grid.keys().__contains__('mask'):
+            final_datset1 = final_datset.where(clipped_target_grid.mask == 1, np.nan)
+        else:
+            final_datset1 = final_datset
+        comp = dict(zlib=True, complevel=5)
+        encoding = {var: comp for var in final_datset1.data_vars}
+        final_datset1.to_netcdf(file_save, encoding=encoding)
         print('done with year ' + str(year_int))
 
 
-def downscale_pressure(orog_file, ds_target, extent, bf_w5e5, bf_out, years_all, var_in):
+def downscale_pressure(orog_file, ds_target, extent, bf_w5e5, bf_out, years_all, var_in, clipped_target_grid):
     """
     Calculates surface air pressure at custom grid
     based on daily w5e5 sealevel pressure and altitude,
@@ -135,6 +141,8 @@ def downscale_pressure(orog_file, ds_target, extent, bf_w5e5, bf_out, years_all,
         int of start and end of regridding [year_start, year_end]
     var_in : str
         which variable are we dealing with? ['sfcWind','ps','rh']
+    clipped_target_grid : xarray Dataset
+        If the land-mask file was used, we will overlay the final dataset with this mask
 
     Returns
     -------
@@ -182,11 +190,10 @@ def downscale_pressure(orog_file, ds_target, extent, bf_w5e5, bf_out, years_all,
         final_datset.time.attrs = clipped_w5e5.time.attrs
         final_datset.lon.attrs = clipped_w5e5.lon.attrs
         final_datset.lat.attrs = clipped_w5e5.lat.attrs
-        final_datset.psl.attrs = clipped_w5e5.psl.attrs
-        final_datset.psl.attrs = {'long_name': 'Surface Air Pressure', 'standard_name': 'surface_air_pressure'}
+        final_datset.psl.attrs = {'long_name': 'Surface Air Pressure', 'standard_name': 'surface_air_pressure',
+                                  'units': 'Pa'}
         final_datset1 = final_datset.rename({'psl': 'ps'})
         del final_datset
-
         final_datset1.attrs = {
             'history': 'File was created by ' + os.getlogin() + ', PC ' + os.uname().nodename + ', created on ' +
                        datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -197,11 +204,17 @@ def downscale_pressure(orog_file, ds_target, extent, bf_w5e5, bf_out, years_all,
             'project': 'Inter-Sectoral Impact Model Intercomparison Project phase 3 (ISIMIP3), HighRes experiments',
             'info': 'calculations based on barometric formula'}
 
-        final_datset1.to_netcdf(file_save)
+        if clipped_target_grid.keys().__contains__('mask'):
+            final_datset2 = final_datset1.where(clipped_target_grid.mask == 1, np.nan)
+        else:
+            final_datset2 = final_datset1
+        comp = dict(zlib=True, complevel=5)
+        encoding = {var: comp for var in final_datset2.data_vars}
+        final_datset2.to_netcdf(file_save, encoding=encoding)
         print('done with year ' + str(year_int))
 
 
-def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_all, var_in):
+def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_all, var_in, clipped_target_grid):
     """
     Calculates surface air pressure based on w5e5 sealevel pressure and altitude, using the barometric formula
 
@@ -222,6 +235,8 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
         int of start and end of regridding [year_start, year_end]
     var_in : str
         which variable are we dealing with? ['sfcWind','ps','rh']
+    clipped_target_grid : xarray Dataset
+        If the land-mask file was used, we will overlay the final dataset with this mask
 
     Returns
     -------
@@ -284,6 +299,10 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
             monthly_rh_cor['hurs'].loc[{'time': slice(datetimes[id_all_month][0], datetimes[id_all_month][-1])}] = \
                 monthly_rh_cor1.hurs.squeeze().values
 
+        monthly_rh_cor.time.attrs = clipped_w5e5.time.attrs
+        monthly_rh_cor.lon.attrs = clipped_w5e5.lon.attrs
+        monthly_rh_cor.lat.attrs = clipped_w5e5.lat.attrs
+        monthly_rh_cor.hurs.attrs = clipped_w5e5.hurs.attrs
         monthly_rh_cor.attrs = {
             'history': 'File was created by ' + os.getlogin() + ', PC ' + os.uname().nodename + ', created on ' +
                        datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -294,11 +313,18 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
             'project': 'Inter-Sectoral Impact Model Intercomparison Project phase 3 (ISIMIP3), HighRes experiments',
             'based on': 'monthly chelsa data'}
 
-        monthly_rh_cor.to_netcdf(file_save)
+        if clipped_target_grid.keys().__contains__('mask'):
+            final_dataset = monthly_rh_cor.where(clipped_target_grid.mask == 1, np.nan)
+        else:
+            final_dataset = monthly_rh_cor
+        comp = dict(zlib=True, complevel=5)
+        encoding = {var: comp for var in monthly_rh_cor.data_vars}
+        final_dataset.to_netcdf(file_save, encoding=encoding)
+
         print('done with year ' + str(year_int))
 
 
-def downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, bf_out, years_all, var_in):
+def downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, bf_out, years_all, var_in, clipped_target_grid):
     """
     Calculates downscaled longwave radiation based on w5e5 longwave etc
 
@@ -321,6 +347,8 @@ def downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, 
         int of start and end of regridding [year_start, year_end]
     var_in : str
         which variable are we dealing with? ['sfcWind','ps','rh']
+    clipped_target_grid : xarray Dataset
+        If the land-mask file was used, we will overlay the final dataset with this mask
 
     Returns
     -------
@@ -435,7 +463,13 @@ def downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, 
             'version': '1.0',
             'project': 'Inter-Sectoral Impact Model Intercomparison Project phase 3 (ISIMIP3a), HighRes experiments'}
 
-        final_datset.to_netcdf(file_save)
+        if clipped_target_grid.keys().__contains__('mask'):
+            final_datset1 = final_datset.where(clipped_target_grid.mask == 1, np.nan)
+        else:
+            final_datset1 = final_datset
+        comp = dict(zlib=True, complevel=5)
+        encoding = {var: comp for var in final_datset1.data_vars}
+        final_datset1.to_netcdf(file_save, encoding=encoding)
         print('done with year ' + str(year_int))
 
 
@@ -517,17 +551,17 @@ def main():
         print('Starting with variable ' + var_in)
         if var_in == 'sfcWind':
             wind_windatlas_file = Path(options.input_path_wind_atlas)  # source: https://globalwindatlas.info/en
-            downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, years_all, var_in)
+            downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, years_all, var_in, clipped_target_grid)
         elif var_in == 'ps':
             orog_file = Path(options.input_path_orog)
-            downscale_pressure(orog_file, ds_target, extent, bf_w5e5, bf_out, years_all, var_in)
+            downscale_pressure(orog_file, ds_target, extent, bf_w5e5, bf_out, years_all, var_in, clipped_target_grid)
         elif var_in == 'rh':
             path_monthly_chelsa = Path(options.input_path_chelsa)
-            downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_all, var_in)
+            downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_all, var_in, clipped_target_grid)
         elif var_in == 'rlds':
             path_rh_fine = Path(options.input_path_rh_fine)
             path_tas_fine = Path(options.input_path_tas_fine)
-            downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, bf_out, years_all, var_in)
+            downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, bf_out, years_all, var_in, clipped_target_grid)
 
         print(timeit2.format(time.time() - tt1))
 
