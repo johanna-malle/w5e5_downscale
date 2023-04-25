@@ -35,7 +35,7 @@ def downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, year
         extent of interest [min_lat, max_lat, min_lon, max_lon]
     bf_w5e5 : Path
         Location of w5e5 base folder.
-    bf_out : str, optional
+    bf_out : Path
         Location of output base folder.
     years_all : ndarray
         int of start and end of regridding [year_start, year_end]
@@ -49,7 +49,7 @@ def downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, year
 
     # step 1: cut global wind speed to our extent and regrid (upscale) it to the target grid already
     wind_windatlas = rioxarray.open_rasterio(wind_windatlas_file, masked_and_scale=True)\
-        .rio.clip_box(minx=float(extent[2]), miny=float(extent[0]), maxx=float(extent[1]), maxy=float(extent[1]))
+        .rio.clip_box(minx=float(extent[2]), miny=float(extent[0]), maxx=float(extent[3]), maxy=float(extent[1]))
     wind_windatlas1 = wind_windatlas.rename({'x': 'lon', 'y': 'lat'}).isel(band=0).to_dataset(name='sfcWind')
 
     regridder_coarse = xe.Regridder(wind_windatlas1, ds_target, "bilinear")
@@ -129,7 +129,7 @@ def downscale_pressure(orog_file, ds_target, extent, bf_w5e5, bf_out, years_all,
         extent of interest [min_lat, max_lat, min_lon, max_lon]
     bf_w5e5 : Path
         Location of w5e5 base folder.
-    bf_out : str, optional
+    bf_out : Path
         Location of output base folder.
     years_all : ndarray
         int of start and end of regridding [year_start, year_end]
@@ -216,7 +216,7 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
         extent of interest [min_lat, max_lat, min_lon, max_lon]
     bf_w5e5 : Path
         Location of w5e5 base folder.
-    bf_out : str, optional
+    bf_out : Path
         Location of output base folder.
     years_all : ndarray
         int of start and end of regridding [year_start, year_end]
@@ -241,11 +241,11 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
     # open first chelsa file to generate regridding weights
     file_in_chelsa = rioxarray.open_rasterio(path_monthly_chelsa / 'CHELSA_hurs_01_1981_V.2.1.tif',
                                              mask_and_scale=True).rio.clip_box(minx=float(extent[2]),
-                                                                               miny=float(extent[3]),
-                                                                               maxx=float(extent[0]),
+                                                                               miny=float(extent[0]),
+                                                                               maxx=float(extent[3]),
                                                                                maxy=float(extent[1]))
-
-    regridder_chelsa = xe.Regridder(file_in_chelsa, ds_target, "bilinear")
+    file_in_chelsa1 = file_in_chelsa.rename({'x': 'lon', 'y': 'lat'}).isel(band=0).to_dataset(name='rh')
+    regridder_chelsa = xe.Regridder(file_in_chelsa1, ds_target, "bilinear")
 
     print('done with regridding... now applying to all timesteps')
 
@@ -264,8 +264,8 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
             file_in_chelsa = glob.glob(str(path_monthly_chelsa) + '/*' + f"{month_int:02}" + '_' + str(year_int) + '*')
             month_chelsa = rioxarray.open_rasterio(file_in_chelsa[0], mask_and_scale=True).rio.clip_box(
                                                                                minx=float(extent[2]),
-                                                                               miny=float(extent[3]),
-                                                                               maxx=float(extent[0]),
+                                                                               miny=float(extent[0]),
+                                                                               maxx=float(extent[3]),
                                                                                maxy=float(extent[1]))
 
             dr_out_chelsa = regridder_chelsa(month_chelsa) * 0.01  # before transformation: change rh to vary b/w 0 1
@@ -315,7 +315,7 @@ def downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, 
         extent of interest [min_lat, max_lat, min_lon, max_lon]
     bf_w5e5 : Path
         Location of w5e5 base folder.
-    bf_out : str, optional
+    bf_out : Path
         Location of output base folder.
     years_all : ndarray
         int of start and end of regridding [year_start, year_end]
@@ -405,15 +405,17 @@ def downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, 
         es_fine = es0 * np.exp((lv / Rv) * (1 / T0 - 1 / temp_fine.tas.data))
         pV_fine = (rh_fine.hurs.data * es_fine) / 100  # water vapur pressure [hPa]
 
-        e_cl_coarse = 0.23 + x1 * ((pV_coarse*100) / temp_coarse.tas.data) ** (1 / x2)  # clear-sky emissivity w5e5 (pV needs to be in Pa not hPa, hence *100)
-        e_cl_fine = 0.23 + x1 * ((pV_fine*100) / temp_fine.tas.data) ** (1 / x2)  # clear-sky emissivity target grid (pV needs to be in Pa not hPa, hence *100)
+        e_cl_coarse = 0.23 + x1 * ((pV_coarse*100) / temp_coarse.tas.data) ** (1 / x2)
+        # e_cl_coarse == clear-sky emissivity w5e5 (pV needs to be in Pa not hPa, hence *100)
+        e_cl_fine = 0.23 + x1 * ((pV_fine*100) / temp_fine.tas.data) ** (1 / x2)
+        # e_cl_fine == clear-sky emissivity target grid (pV needs to be in Pa not hPa, hence *100)
 
         e_as_coarse = lw_coarse.rlds.data / (sbc * temp_coarse.tas.data ** 4)  # all-sky emissivity w5e5
-        e_as_coarse[e_as_coarse > 1] = 1  #  constrain all-sky emissivity to max 1
+        e_as_coarse[e_as_coarse > 1] = 1  # constrain all-sky emissivity to max 1
         delta_e = e_as_coarse - e_cl_coarse  # cloud-based component of emissivity w5e5
         
         e_as_fine = e_cl_fine + delta_e
-        e_as_fine[e_as_fine > 1] = 1  #  constrain all-sky emissivity to max 1
+        e_as_fine[e_as_fine > 1] = 1  # constrain all-sky emissivity to max 1
         lw_fine = e_as_fine * sbc * temp_fine.tas.data ** 4  # downscaled lwr! assume cloud e is the same
 
         final_datset = lw_coarse.copy()
@@ -468,10 +470,10 @@ def main():
     parser.add_option('-v', '--var_interest', action='store',
                       type='string', dest='var_interest', default='sfcWind',
                       help='name of variable to be analysed, comma separated if more than 1 [str]')
-    parser.add_option('-v', '--input_path_tas_fine', action='store',
+    parser.add_option('-l', '--input_path_tas_fine', action='store',
                       type='string', dest='input_path_tas_fine', default='',
                       help='path to highres tas for lwr computation [str]')
-    parser.add_option('-v', '--input_path_rh_fine', action='store',
+    parser.add_option('-r', '--input_path_rh_fine', action='store',
                       type='string', dest='input_path_rh_fine', default='',
                       help='path to highres rh for lwr computation [str]')
     parser.add_option('-y', '--year_start', action='store',
