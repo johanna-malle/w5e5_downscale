@@ -244,7 +244,7 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
                                                                                miny=float(extent[0]),
                                                                                maxx=float(extent[3]),
                                                                                maxy=float(extent[1]))
-    file_in_chelsa1 = file_in_chelsa.rename({'x': 'lon', 'y': 'lat'}).isel(band=0).to_dataset(name='rh')
+    file_in_chelsa1 = file_in_chelsa.rename({'x': 'lon', 'y': 'lat'}).isel(band=0).to_dataset(name='hurs')
     regridder_chelsa = xe.Regridder(file_in_chelsa1, ds_target, "bilinear")
 
     print('done with regridding... now applying to all timesteps')
@@ -267,9 +267,9 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
                                                                                miny=float(extent[0]),
                                                                                maxx=float(extent[3]),
                                                                                maxy=float(extent[1]))
-
-            dr_out_chelsa = regridder_chelsa(month_chelsa) * 0.01  # before transformation: change rh to vary b/w 0 1
-            dr_out_chelsa_tr = np.log(dr_out_chelsa / (1 - dr_out_chelsa))  # assume beta distrib. => logit transform
+            month_chelsa1 = month_chelsa.rename({'x': 'lon', 'y': 'lat'}).isel(band=0).to_dataset(name='hurs')
+            dr_out_chelsa = regridder_chelsa(month_chelsa1) * 0.0001  # before transformation: change rh to vary b/w 0 1
+            dr_out_chelsa_tr = np.log(dr_out_chelsa.hurs / (1 - dr_out_chelsa.hurs))  # assume beta distrib. => logit transform
 
             dr_out_w5e5 = regridder_w5e5(month_w5e5) * 0.01  # before transformation: change rh to vary b/w 0 and 1
             dr_out_w5e5_mean = dr_out_w5e5.mean(dim='time')  # monthly average for diff layer b/c chelsa == monthly
@@ -282,7 +282,7 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
 
             id_all_month = np.logical_and(datetimes.year == year_int, datetimes.month == month_int)
             monthly_rh_cor['hurs'].loc[{'time': slice(datetimes[id_all_month][0], datetimes[id_all_month][-1])}] = \
-                monthly_rh_cor1.hurs.isel(band=0).squeeze().values
+                monthly_rh_cor1.hurs.squeeze().values
 
         monthly_rh_cor.attrs = {
             'history': 'File was created by ' + os.getlogin() + ', PC ' + os.uname().nodename + ', created on ' +
