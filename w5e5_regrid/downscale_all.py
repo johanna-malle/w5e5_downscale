@@ -34,7 +34,7 @@ def downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, year
         comma seperated list of strings:
         extent of interest [min_lat, max_lat, min_lon, max_lon]
     bf_w5e5 : Path
-        Location of w5e5 base folder.
+    Location of w5e5 base folder.
     bf_out : Path
         Location of output base folder.
     years_all : ndarray
@@ -46,20 +46,20 @@ def downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, year
     -------
 
     """
-
     # step 1: cut global wind speed to our extent and regrid (upscale) it to the target grid already
     wind_windatlas = rioxarray.open_rasterio(wind_windatlas_file, masked_and_scale=True)\
-        .rio.clip_box(minx=float(extent[2]), miny=float(extent[0]), maxx=float(extent[3]), maxy=float(extent[1]))
+        .rio.clip_box(minx=floor(float(extent[2]))-0.5, miny=floor(float(extent[0]))-0.5, maxx=ceil(float(extent[3]))+0.5, maxy=ceil(float(extent[1]))+0.5)
     wind_windatlas1 = wind_windatlas.rename({'x': 'lon', 'y': 'lat'}).isel(band=0).to_dataset(name='sfcWind')
 
     regridder_coarse = xe.Regridder(wind_windatlas1, ds_target, "bilinear")
     dr_out_wind_atlas = regridder_coarse(wind_windatlas1)
+    dr_out_wind_atlas = dr_out_wind_atlas.where(dr_out_wind_atlas.sfcWind.values > 0, 0)
 
     # step 2: cut w5e5 data to our extent and average over time to match global wind atlas timeframe (2008-2017)
     all_files = list(Path(bf_w5e5 / var_in).iterdir())
     w5e5_data = xr.open_mfdataset(all_files)
-    clipped_w5e5 = w5e5_data.loc[{'lat': slice(ceil(float(extent[1])), floor(float(extent[0]))),
-                                  'lon': slice(floor(float(extent[2])), ceil(float(extent[3])))}]
+    clipped_w5e5 = w5e5_data.loc[{'lat': slice(ceil(float(extent[1]))+0.5, floor(float(extent[0]))-0.5),
+                                  'lon': slice(floor(float(extent[2]))-0.5, ceil(float(extent[3]))+0.5)}]
     clipped_w5e5_time = clipped_w5e5.loc[{'time': slice(np.datetime64('2008-01-01'), np.datetime64('2017-12-31'))}]
     w5e5_avg_time = clipped_w5e5_time.mean(dim='time')
 
@@ -85,6 +85,8 @@ def downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, year
         file_save = bf_out / var_in / Path(var_in + '_corr_v1.0_'+str(year_int)+'.nc')
         id_all = datetimes.year == year_int
         clip_w5e5_time = clipped_w5e5.loc[{'time': slice(datetimes[id_all][0], datetimes[id_all][-1])}]
+        id_all = datetimes.year == year_int
+        clip_w5e5_time = clipped_w5e5.loc[{'time': slice(datetimes[id_all][0], datetimes[id_all][-1])}]
         clip_w5e5_time_regrid = regridder(clip_w5e5_time)
         clip_log_corr = np.log(clip_w5e5_time_regrid.sfcWind.values,
                                out=np.zeros_like(clip_w5e5_time_regrid.sfcWind.values),
@@ -108,10 +110,10 @@ def downscale_wind(wind_windatlas_file, ds_target, extent, bf_w5e5, bf_out, year
             'project': 'Inter-Sectoral Impact Model Intercomparison Project phase 3 (ISIMIP3), HighRes experiments',
             'based on': 'Global wind atlas (https://globalwindatlas.info/en)'}
 
-        if clipped_target_grid.keys().__contains__('mask'):
-            final_datset1 = final_datset.where(clipped_target_grid.mask == 1, np.nan)
-        else:
-            final_datset1 = final_datset
+        #if clipped_target_grid.keys().__contains__('mask'):
+         #   final_datset1 = final_datset.where(clipped_target_grid.mask == 1, np.nan)
+        #else:
+        final_datset1 = final_datset
         comp = dict(zlib=True, complevel=5)
         encoding = {var: comp for var in final_datset1.data_vars}
         final_datset1.to_netcdf(file_save, encoding=encoding)
@@ -204,10 +206,10 @@ def downscale_pressure(orog_file, ds_target, extent, bf_w5e5, bf_out, years_all,
             'project': 'Inter-Sectoral Impact Model Intercomparison Project phase 3 (ISIMIP3), HighRes experiments',
             'info': 'calculations based on barometric formula'}
 
-        if clipped_target_grid.keys().__contains__('mask'):
-            final_datset2 = final_datset1.where(clipped_target_grid.mask == 1, np.nan)
-        else:
-            final_datset2 = final_datset1
+        #if clipped_target_grid.keys().__contains__('mask'):
+         #   final_datset2 = final_datset1.where(clipped_target_grid.mask == 1, np.nan)
+        #else:
+        final_datset2 = final_datset1
         comp = dict(zlib=True, complevel=5)
         encoding = {var: comp for var in final_datset2.data_vars}
         final_datset2.to_netcdf(file_save, encoding=encoding)
@@ -245,8 +247,8 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
 
     all_files = list(Path(bf_w5e5 / 'hurs').iterdir())
     w5e5_data = xr.open_mfdataset(all_files)
-    clipped_w5e5 = w5e5_data.loc[{'lat': slice(ceil(float(extent[1])), floor(float(extent[0]))),
-                                  'lon': slice(floor(float(extent[2])), ceil(float(extent[3])))}]
+    clipped_w5e5 = w5e5_data.loc[{'lat': slice(ceil(float(extent[1]))+0.5, floor(float(extent[0]))-0.5),
+                                  'lon': slice(floor(float(extent[2]))-0.5, ceil(float(extent[3]))+0.5)}]
 
     regridder_w5e5 = xe.Regridder(clipped_w5e5, ds_target, "bilinear")
 
@@ -283,11 +285,19 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
                                                                                maxx=float(extent[3]),
                                                                                maxy=float(extent[1]))
             month_chelsa1 = month_chelsa.rename({'x': 'lon', 'y': 'lat'}).isel(band=0).to_dataset(name='hurs')
-            dr_out_chelsa = regridder_chelsa(month_chelsa1) * 0.0001  # before transformation: change rh to vary b/w 0 1
+            dr_out_chelsa = regridder_chelsa(month_chelsa1) * 0.01  # before transformation: change rh to vary b/w 0 1
+
+            if np.max(dr_out_chelsa.hurs).values > 1:
+                dr_out_chelsa = dr_out_chelsa * 0.01
+
             dr_out_chelsa_tr = np.log(dr_out_chelsa.hurs / (1 - dr_out_chelsa.hurs))  # assume beta distrib. => logit transform
 
             dr_out_w5e5 = regridder_w5e5(month_w5e5) * 0.01  # before transformation: change rh to vary b/w 0 and 1
             dr_out_w5e5_mean = dr_out_w5e5.mean(dim='time')  # monthly average for diff layer b/c chelsa == monthly
+
+            if np.max(dr_out_w5e5_mean.hurs).values > 1:
+                dr_out_w5e5_mean = dr_out_w5e5_mean * 0.01
+
             dr_out_w5e5_tr = np.log(dr_out_w5e5 / (1 - dr_out_w5e5))  # assume beta distribuation => logit transform
             dr_out_w5e5_mean_tr = np.log(dr_out_w5e5_mean / (1 - dr_out_w5e5_mean))  # logit transform
 
@@ -313,10 +323,10 @@ def downscale_rh(path_monthly_chelsa, ds_target, extent, bf_w5e5, bf_out, years_
             'project': 'Inter-Sectoral Impact Model Intercomparison Project phase 3 (ISIMIP3), HighRes experiments',
             'based on': 'monthly chelsa data'}
 
-        if clipped_target_grid.keys().__contains__('mask'):
-            final_dataset = monthly_rh_cor.where(clipped_target_grid.mask == 1, np.nan)
-        else:
-            final_dataset = monthly_rh_cor
+        #if clipped_target_grid.keys().__contains__('mask'):
+         #   final_dataset = monthly_rh_cor.where(clipped_target_grid.mask == 1, np.nan)
+        #else:
+        final_dataset = monthly_rh_cor
         comp = dict(zlib=True, complevel=5)
         encoding = {var: comp for var in monthly_rh_cor.data_vars}
         final_dataset.to_netcdf(file_save, encoding=encoding)
@@ -385,7 +395,7 @@ def downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, 
     year_all = range(years_all[0], years_all[1]+1)
 
     # we also need target grid rh and temp:
-    file_in_tas_fine = glob.glob(str(path_tas_fine) + '/*' + str(year_all[0]) + '*')
+    file_in_tas_fine = glob.glob(str(path_tas_fine) + '/*' + str(year_all[0]) + '*.nc')
     tas_in_fine = xr.open_dataset(file_in_tas_fine[0])
     clipped_tas_fine = tas_in_fine.loc[{'lat': slice(floor(float(extent[0])), ceil(float(extent[1]))),
                                         'lon': slice(floor(float(extent[2])), ceil(float(extent[3])))}]
@@ -420,11 +430,15 @@ def downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, 
                                             'lon': slice(floor(float(extent[2])), ceil(float(extent[3])))}]
         rh_fine = regridder_chelsa_rh(clipped_rh_fine)
 
-        file_in_tas_fine = glob.glob(str(path_tas_fine) + '/*' + str(year_int) + '*')
+        file_in_tas_fine = glob.glob(str(path_tas_fine) + '/*' + str(year_int) + '*.nc')
         file_tas_fine = xr.open_mfdataset(file_in_tas_fine)  # multiple files
         clipped_tas_fine = file_tas_fine.loc[{'lat': slice(floor(float(extent[0])), ceil(float(extent[1]))),
                                               'lon': slice(floor(float(extent[2])), ceil(float(extent[3])))}]
         temp_fine = regridder_chelsa_tas(clipped_tas_fine)
+        if temp_fine.data_vars.__contains__('tas'):
+            pass
+        else:
+            temp_fine = temp_fine.rename_vars({'TBOT': 'tas'})
 
         # now ready for calculation:
         es_coarse = es0 * np.exp((lv / Rv) * (1 / T0 - 1 / temp_coarse.tas.data))
@@ -463,10 +477,10 @@ def downscale_longwave(path_rh_fine, path_tas_fine, ds_target, extent, bf_w5e5, 
             'version': '1.0',
             'project': 'Inter-Sectoral Impact Model Intercomparison Project phase 3 (ISIMIP3a), HighRes experiments'}
 
-        if clipped_target_grid.keys().__contains__('mask'):
-            final_datset1 = final_datset.where(clipped_target_grid.mask == 1, np.nan)
-        else:
-            final_datset1 = final_datset
+        #if clipped_target_grid.keys().__contains__('mask'):
+        #    final_datset1 = final_datset.where(clipped_target_grid.mask == 1, np.nan)
+        #else:
+        final_datset1 = final_datset
         comp = dict(zlib=True, complevel=5)
         encoding = {var: comp for var in final_datset1.data_vars}
         final_datset1.to_netcdf(file_save, encoding=encoding)
@@ -544,7 +558,6 @@ def main():
     var_in_all = options.var_interest.split(',')
 
     years_all = np.array([options.year_start, options.year_end])
-
     for var_in in var_in_all:
         tt1 = time.time()
         (bf_out / var_in).mkdir(parents=True, exist_ok=True)
